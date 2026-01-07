@@ -1,0 +1,101 @@
+/* ===== Global Reset ===== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* ===== Body ===== */
+body {
+    background: #0f172a;
+    color: #ffffff;
+    font-family: Arial, Helvetica, sans-serif;
+    text-align: center;
+    padding: 20px;
+}
+
+/* ===== Headings ===== */
+h1 {
+    margin-bottom: 20px;
+}
+
+h3 {
+    margin: 10px 0;
+}
+
+/* ===== Main Game Box ===== */
+.box {
+    background: #1e293b;
+    padding: 25px;
+    border-radius: 12px;
+    max-width: 420px;
+    margin: auto;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+}
+
+/* ===== Inputs & Buttons ===== */
+input,
+select,
+button {
+    width: 90%;
+    padding: 10px;
+    margin-top: 10px;
+    border-radius: 6px;
+    border: none;
+    font-size: 16px;
+    outline: none;
+}
+
+/* ===== Buttons ===== */
+button {
+    background: #22c55e;
+    color: #000;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+button:hover {
+    background: #16a34a;
+}
+
+/* ===== Danger Button ===== */
+.danger,
+.host {
+    background: #ef4444;
+    color: white;
+}
+
+.danger:hover,
+.host:hover {
+    background: #dc2626;
+}
+
+/* ===== Hint Text ===== */
+.hint {
+    color: #93c5fd;
+    font-size: 14px;
+    margin-top: 5px;
+}
+
+/* ===== Hint List ===== */
+ul {
+    list-style: none;
+    padding: 0;
+}
+
+ul li {
+    background: #020617;
+    padding: 8px;
+    margin-top: 6px;
+    border-radius: 6px;
+}
+
+/* ===== Sections Spacing ===== */
+#setup,
+#playerView,
+#hostHints,
+#voting,
+#result {
+    margin-top: 15px;
+}
