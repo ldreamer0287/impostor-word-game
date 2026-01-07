@@ -1,44 +1,13 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
-<title>Impostor Multiplayer Game</title>
+<title>Impostor Multiplayer Online</title>
 
-<style>
-body {
-    background: #0f172a;
-    color: white;
-    font-family: Arial, sans-serif;
-    text-align: center;
-    padding: 20px;
-}
-.box {
-    background: #1e293b;
-    padding: 25px;
-    border-radius: 12px;
-    max-width: 420px;
-    margin: auto;
-}
-input, button, select {
-    width: 90%;
-    padding: 10px;
-    margin-top: 10px;
-    border-radius: 6px;
-    border: none;
-    font-size: 16px;
-}
-button {
-    background: #22c55e;
-    cursor: pointer;
-}
-.danger {
-    background: #ef4444;
-    color: white;
-}
-.hint {
-    color: #93c5fd;
-}
-</style>
+<link rel="stylesheet" href="style.css">
+
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 </head>
 
 <body>
@@ -47,157 +16,102 @@ button {
 
 <div class="box">
 
-<!-- SETUP -->
-<div id="setup">
-    <input type="number" id="players" min="3" placeholder="Number of Players">
-    <button onclick="startGame()">Start Game</button>
+<div id="home">
+    <input id="name" placeholder="Your Name">
+    <input id="room" placeholder="Room Code">
+    <button onclick="createRoom()">Create Room (Host)</button>
+    <button onclick="joinRoom()">Join Room</button>
 </div>
 
-<!-- PLAYER VIEW -->
-<div id="playerView" style="display:none;">
-    <h3 id="playerTitle"></h3>
+<div id="game" style="display:none;">
+    <h3 id="status"></h3>
     <p id="word"></p>
     <p class="hint" id="hint"></p>
-    <button onclick="nextPlayer()">Next Player</button>
 </div>
 
-<!-- HOST HINT CONTROL -->
-<div id="hostHints" style="display:none;">
-    <h3>👑 Host: Add Hint</h3>
-    <input id="newHint" placeholder="Enter a new hint">
+<div id="hostPanel" style="display:none;">
+    <input id="newHint" placeholder="Add Hint">
     <button onclick="addHint()">Add Hint</button>
-
-    <h3>Hints</h3>
-    <ul id="hintList"></ul>
-
-    <button class="danger" onclick="goToVoting()">Start Voting</button>
-</div>
-
-<!-- VOTING -->
-<div id="voting" style="display:none;">
-    <h3>🗳️ Vote the Impostor</h3>
-    <select id="voteSelect"></select>
-    <button class="danger" onclick="submitVote()">Submit Vote</button>
-</div>
-
-<!-- RESULT -->
-<div id="result" style="display:none;">
-    <h2 id="resultText"></h2>
-    <p id="impostorInfo"></p>
-    <button onclick="location.reload()">Play Again</button>
+    <button class="danger" onclick="startVote()">Start Voting</button>
 </div>
 
 </div>
 
 <script>
-const wordPairs = [
-    { common: "Football", impostor: "Cricket", hint: "Popular outdoor sports" },
-    { common: "Apple", impostor: "Orange", hint: "Fruits" },
-    { common: "Bus", impostor: "Train", hint: "Public transport" },
-    { common: "Teacher", impostor: "Student", hint: "School people" },
-    { common: "Laptop", impostor: "Mobile", hint: "Electronic devices" }
+// 🔴 PASTE YOUR FIREBASE CONFIG HERE
+var firebaseConfig = {
+    apiKey: "YOUR_KEY",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    databaseURL: "https://YOUR_PROJECT.firebaseio.com",
+    projectId: "YOUR_PROJECT"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+let roomCode, playerName, isHost = false;
+let words = [
+    { common: "Football", impostor: "Cricket", hint: "Sports" },
+    { common: "Apple", impostor: "Orange", hint: "Fruits" }
 ];
 
-let totalPlayers;
-let currentPlayer = 0;
-let impostor;
-let selectedPair;
-let hints = [];
+function createRoom() {
+    playerName = name.value;
+    roomCode = Math.random().toString(36).substr(2,5);
+    isHost = true;
 
-function startGame() {
-    totalPlayers = parseInt(document.getElementById("players").value);
-    if (totalPlayers < 3) {
-        alert("At least 3 players required!");
-        return;
-    }
+    const pair = words[Math.floor(Math.random()*words.length)];
+    const impostor = Math.floor(Math.random()*4);
 
-    selectedPair = wordPairs[Math.floor(Math.random() * wordPairs.length)];
-    impostor = Math.floor(Math.random() * totalPlayers);
-    hints.push(selectedPair.hint); // first hint
+    db.ref("rooms/"+roomCode).set({
+        host: playerName,
+        pair,
+        impostor,
+        hints: [pair.hint],
+        players: {}
+    });
 
-    document.getElementById("setup").style.display = "none";
-    document.getElementById("playerView").style.display = "block";
-    showPlayer();
+    join();
 }
 
-function showPlayer() {
-    document.getElementById("playerTitle").innerText =
-        "Player " + (currentPlayer + 1) + " – Look at your word";
-
-    document.getElementById("word").innerText =
-        currentPlayer === impostor
-        ? selectedPair.impostor
-        : selectedPair.common;
-
-    document.getElementById("hint").innerText =
-        "Hint: " + hints.join(" | ");
+function joinRoom() {
+    playerName = name.value;
+    roomCode = room.value;
+    join();
 }
 
-function nextPlayer() {
-    currentPlayer++;
-    if (currentPlayer >= totalPlayers) {
-        document.getElementById("playerView").style.display = "none";
-        document.getElementById("hostHints").style.display = "block";
-        updateHintList();
-    } else {
-        showPlayer();
-    }
-}
+function join() {
+    document.getElementById("home").style.display = "none";
+    document.getElementById("game").style.display = "block";
 
-/* HOST ADDS HINT */
-function addHint() {
-    const hintInput = document.getElementById("newHint");
-    if (!hintInput.value) return;
+    db.ref("rooms/"+roomCode+"/players").push(playerName);
 
-    hints.push(hintInput.value);
-    hintInput.value = "";
-    updateHintList();
-}
+    db.ref("rooms/"+roomCode).on("value", snap => {
+        const data = snap.val();
+        if (!data) return;
 
-function updateHintList() {
-    const list = document.getElementById("hintList");
-    list.innerHTML = "";
-    hints.forEach((h, i) => {
-        const li = document.createElement("li");
-        li.className = "hint";
-        li.innerText = "Round " + (i + 1) + ": " + h;
-        list.appendChild(li);
+        const playerIndex = Object.values(data.players).indexOf(playerName);
+        const word = playerIndex === data.impostor
+            ? data.pair.impostor
+            : data.pair.common;
+
+        document.getElementById("word").innerText = "Your word: " + word;
+        document.getElementById("hint").innerText =
+            "Hints: " + data.hints.join(" | ");
+
+        if (isHost) document.getElementById("hostPanel").style.display = "block";
     });
 }
 
-/* MOVE TO VOTING */
-function goToVoting() {
-    document.getElementById("hostHints").style.display = "none";
-    setupVoting();
+function addHint() {
+    const hint = newHint.value;
+    db.ref("rooms/"+roomCode+"/hints").push(hint);
+    newHint.value = "";
 }
 
-function setupVoting() {
-    document.getElementById("voting").style.display = "block";
-    const select = document.getElementById("voteSelect");
-    select.innerHTML = "";
-
-    for (let i = 0; i < totalPlayers; i++) {
-        const option = document.createElement("option");
-        option.value = i;
-        option.text = "Player " + (i + 1);
-        select.appendChild(option);
-    }
-}
-
-function submitVote() {
-    const votedPlayer = parseInt(document.getElementById("voteSelect").value);
-
-    document.getElementById("voting").style.display = "none";
-    document.getElementById("result").style.display = "block";
-
-    document.getElementById("resultText").innerText =
-        votedPlayer === impostor ? "🎉 Impostor Caught!" : "😈 Impostor Escaped!";
-
-    document.getElementById("impostorInfo").innerText =
-        "Impostor was Player " + (impostor + 1);
+function startVote() {
+    alert("Voting phase started!");
 }
 </script>
 
 </body>
 </html>
-
